@@ -8,3 +8,4 @@
 /app/config/guild_config.json
 /token.txt
 /app/config/
+__pycache__
