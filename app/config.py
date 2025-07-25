@@ -1,7 +1,7 @@
 import os
 import json
 
-CONFIG_FILE = "config/config.json"
+CONFIG_FILE = "config/guild_config.json"
 
 
 def _ensure_file():
