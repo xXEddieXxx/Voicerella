@@ -1,9 +1,8 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
 
 
-def register_general_commands(bot: commands.Bot):
+def register_general_commands(bot):
     @app_commands.command(name="list_channels", description="List all channels in the server.")
     async def list_channels(interaction: discord.Interaction):
         guild = interaction.guild
