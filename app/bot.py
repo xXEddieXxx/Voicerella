@@ -21,13 +21,16 @@ register_events(bot)
 register_general_commands(bot)
 
 @bot.event
+@bot.event
 async def on_ready():
-    logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    try:
-        synced = await bot.tree.sync()
-        logger.info(f"Synced {len(synced)} slash commands.")
-    except Exception as e:
-        logger.error(f"Error syncing slash commands: {e}")
+    if not bot.synced:
+        try:
+            synced = await bot.tree.sync()
+            logger.info(f"Slash-Befehle synchronisiert: {len(synced)}")
+        except Exception as e:
+            logger.error(f"Fehler beim Synchronisieren der Slash-Befehle: {e}")
+        bot.synced = True
+    logger.info(f"Eingeloggt als {bot.user} (ID: {bot.user.id})")
 
 async def main():
     if PRODUCTION:
