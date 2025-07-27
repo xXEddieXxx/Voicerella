@@ -38,7 +38,3 @@ def delete(guild_id: str, key: str):
 
 def fetch_all():
     return load()
-
-def get_required_role_id(guild_id: str):
-    data = load()
-    return data.get(guild_id, {}).get("required_role_id")

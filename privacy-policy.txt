@@ -1,4 +1,4 @@
-Privacy Policy for Ciaorella
+Privacy Policy for Voicerella
 Last Updated: [2025-06-06]
 
 This privacy policy outlines how our Discord bot (the “Bot”) collects, uses, and stores data within Discord servers.

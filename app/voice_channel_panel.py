@@ -1,83 +1,144 @@
 import discord
 from discord import ui, Interaction, ButtonStyle
-from app.voice_channel_modals import RenameChannelModal, SetUserLimitModal, TransferOwnershipModal
 
-EMOJI_RENAME = "✏️"
-EMOJI_LIMIT = "👥"
-EMOJI_KICK = "🥾"
-EMOJI_TRANSFER = "🔄"
-EMOJI_CHANNEL = "🔊"
-EMOJI_OWNER = "⭐"
-EMOJI_INFO = "ℹ️"
+from logger import logger
+
+from app.voice_channel_modals import (
+    RenameChannelModal,
+    SetUserLimitModal,
+    build_panel_embed,
+)
+from app.voice_channel_views import (
+    KickUserSelectView,
+    TransferOwnershipSelectView,
+    ConfirmCloseView,
+)
 
 class VoiceChannelPanel(ui.View):
     def __init__(self, member: discord.Member, channel: discord.VoiceChannel):
         super().__init__(timeout=None)
         self.owner = member
         self.channel = channel
+        self.panel_message = None
+        logger.debug(f"VoiceChannelPanel initialisiert für {member.display_name} in Kanal '{channel.name}' (ID: {channel.id})")
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         if interaction.user.id != self.owner.id:
+            logger.warning(f"Zugriffsversuch von {interaction.user.display_name} (ID: {interaction.user.id}) auf Panel von {self.owner.display_name}")
             await interaction.response.send_message(
-                "Nur der Besitzer kann dieses Panel benutzen.", ephemeral=True)
+                "Nur der Besitzer kann dieses Panel benutzen.", ephemeral=True
+            )
             return False
+        logger.debug(f"Panel-Zugriff erlaubt für Besitzer {self.owner.display_name}")
         return True
 
-    @ui.button(emoji=EMOJI_RENAME, style=ButtonStyle.primary, label=None, row=0)
+    @ui.button(label="Kanal umbenennen", style=ButtonStyle.primary, row=0)
     async def rename(self, interaction: Interaction, button: ui.Button):
-        await interaction.response.send_modal(RenameChannelModal(self.channel))
+        logger.info(f"Rename-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
+        try:
+            await interaction.response.send_modal(RenameChannelModal(self.channel, self))
+        except Exception as e:
+            logger.error(f"Fehler beim Öffnen des Rename-Modals für Kanal '{self.channel.name}': {e}", exc_info=True)
+            await interaction.response.send_message(
+                "❌ Fehler beim Öffnen des Umbenennen-Modals.", ephemeral=True
+            )
 
-    @ui.button(emoji=EMOJI_LIMIT, style=ButtonStyle.secondary, label=None, row=0)
+    @ui.button(label="Nutzerlimit setzen", style=ButtonStyle.secondary, row=0)
     async def set_limit(self, interaction: Interaction, button: ui.Button):
-        await interaction.response.send_modal(SetUserLimitModal(self.channel))
+        logger.info(f"Nutzerlimit-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
+        try:
+            await interaction.response.send_modal(SetUserLimitModal(self.channel, self))
+        except Exception as e:
+            logger.error(f"Fehler beim Öffnen des Nutzerlimit-Modals für Kanal '{self.channel.name}': {e}", exc_info=True)
+            await interaction.response.send_message(
+                "❌ Fehler beim Öffnen des Nutzerlimit-Modals.", ephemeral=True
+            )
 
-    @ui.button(emoji=EMOJI_KICK, style=ButtonStyle.danger, label=None, row=0)
-    async def kick_all(self, interaction: Interaction, button: ui.Button):
-        kicked_count = 0
-        for member in self.channel.members:
-            if member != self.owner:
-                await member.move_to(None)
-                kicked_count += 1
-        await interaction.response.send_message(
-            f"{EMOJI_KICK} {kicked_count} Nutzer{' wurden' if kicked_count != 1 else ' wurde'} aus dem Kanal entfernt.",
-            ephemeral=True
-        )
+    @ui.button(label="Nutzer entfernen", style=ButtonStyle.danger, row=0)
+    async def kick_user(self, interaction: Interaction, button: ui.Button):
+        logger.info(f"Nutzer entfernen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
+        try:
+            kickable_members = [
+                m for m in self.channel.members if m != self.owner
+            ]
+            if not kickable_members:
+                logger.info(f"Keine weiteren Nutzer zum Entfernen in Kanal '{self.channel.name}'")
+                await interaction.response.send_message(
+                    "Kein weiterer Nutzer zum Entfernen gefunden.",
+                    ephemeral=True
+                )
+                return
 
-    @ui.button(emoji=EMOJI_TRANSFER, style=ButtonStyle.success, label=None, row=0)
+            await interaction.response.send_message(
+                "Wähle einen Nutzer zum Entfernen aus:",
+                ephemeral=True,
+                view=KickUserSelectView(self.channel, self.owner, self)
+            )
+        except Exception as e:
+            logger.error(f"Fehler beim Anzeigen der KickUserSelectView für Kanal '{self.channel.name}': {e}", exc_info=True)
+            await interaction.response.send_message(
+                "❌ Fehler beim Anzeigen der Nutzer-Auswahl.",
+                ephemeral=True
+            )
+
+    @ui.button(label="Besitz übertragen", style=ButtonStyle.success, row=0)
     async def transfer(self, interaction: Interaction, button: ui.Button):
-        await interaction.response.send_modal(TransferOwnershipModal(self.channel, self))
+        logger.info(f"Besitz übertragen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
+        try:
+            transferrable_members = [
+                m for m in self.channel.members if m != self.owner
+            ]
+            if not transferrable_members:
+                logger.info(f"Keine weiteren Nutzer für Besitzübergabe in Kanal '{self.channel.name}'")
+                await interaction.response.send_message(
+                    "Kein weiterer Nutzer für Besitzübergabe gefunden.",
+                    ephemeral=True
+                )
+                return
 
+            await interaction.response.send_message(
+                "Wähle einen Nutzer, an den du den Kanalbesitz übertragen möchtest:",
+                ephemeral=True,
+                view=TransferOwnershipSelectView(self.channel, self.owner, self)
+            )
+        except Exception as e:
+            logger.error(f"Fehler beim Anzeigen der TransferOwnershipSelectView für Kanal '{self.channel.name}': {e}", exc_info=True)
+            await interaction.response.send_message(
+                "❌ Fehler beim Anzeigen der Nutzer-Auswahl.",
+                ephemeral=True
+            )
 
-async def send_voice_channel_panel(channel: discord.VoiceChannel, owner: discord.Member):
-    member_count = len(channel.members)
-    user_limit = channel.user_limit if channel.user_limit > 0 else "∞"
-    voice_icon = EMOJI_CHANNEL
-    info_lines = [
-        f"{EMOJI_OWNER} **Besitzer:** {owner.mention}",
-        f"{voice_icon} **Kanal:** {channel.name}",
-        f"👥 **Nutzer:** {member_count}/{user_limit}",
-    ]
-    controls_lines = [
-        f"{EMOJI_RENAME} **Umbenennen**\n> Ändere den Namen deines Kanals",
-        f"{EMOJI_LIMIT} **Limit setzen**\n> Max. Nutzerzahl festlegen",
-        f"{EMOJI_KICK} **Alle entfernen**\n> Entferne alle Nutzer aus dem Kanal",
-        f"{EMOJI_TRANSFER} **Übertragen**\n> Übertrage den Kanalbesitz",
-    ]
-    embed = discord.Embed(
-        title=f"{EMOJI_INFO} Sprachkanal Steuerung",
-        description="\n".join(info_lines),
-        color=discord.Color.from_rgb(108, 83, 245)
-    )
-    embed.add_field(
-        name="Aktionen",
-        value="\n\n".join(controls_lines),
-        inline=False
-    )
-    embed.set_thumbnail(url=owner.display_avatar.url)
-    embed.set_footer(text="Verwalte deinen privaten Sprachkanal ganz einfach! 🚀")
+    @ui.button(label="Kanal schließen", style=ButtonStyle.danger, row=0)
+    async def close_channel(self, interaction: Interaction, button: ui.Button):
+        logger.info(f"Kanal schließen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
+        try:
+            await interaction.response.send_message(
+                "⚠️ Bist du sicher, dass du den Kanal schließen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+                ephemeral=True,
+                view=ConfirmCloseView(self.channel)
+            )
+        except Exception as e:
+            logger.error(f"Fehler beim Anzeigen der ConfirmCloseView für Kanal '{self.channel.name}': {e}", exc_info=True)
+            await interaction.response.send_message(
+                "❌ Fehler beim Anzeigen des Schließen-Bestätigungsdialogs.",
+                ephemeral=True
+            )
 
-    await channel.send(
-        content=f"{owner.mention} Hier ist dein Steuerungs-Panel für den Sprachkanal:",
-        embed=embed,
-        view=VoiceChannelPanel(owner, channel)
-    )
+async def send_voice_channel_panel(
+    channel: discord.VoiceChannel,
+    owner: discord.Member
+) -> discord.Message:
+    try:
+        embed = build_panel_embed(owner, channel)
+        view = VoiceChannelPanel(owner, channel)
+        message = await channel.send(
+            content=f"{owner.mention} Hier ist dein **Sprachkanal-Panel**:",
+            embed=embed,
+            view=view
+        )
+        view.panel_message = message
+        logger.info(f"Panel-Nachricht erfolgreich gesendet für Kanal '{channel.name}' (ID: {channel.id}) und Besitzer {owner.display_name}")
+        return message
+    except Exception as e:
+        logger.error(f"Fehler beim Senden des Panels für Kanal '{channel.name}': {e}", exc_info=True)
+        raise

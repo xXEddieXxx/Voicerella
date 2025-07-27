@@ -1,9 +1,14 @@
 import logging
 import sys
 
+PRODUCTION = False
+
 def setup_logger():
     logger = logging.getLogger("VoicerellaBot")
-    logger.setLevel(logging.INFO)
+    if PRODUCTION:
+        logger.setLevel(logging.WARNING)
+    else:
+        logger.setLevel(logging.INFO)
 
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")

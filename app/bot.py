@@ -1,10 +1,8 @@
 import os
-import asyncio
 import discord
 from discord.ext import commands
 
 from app.admin_commands import register_admin_commands
-from app.commands import register_general_commands
 from app.events import register_events
 from logger import logger
 
@@ -15,12 +13,11 @@ intents.members = True
 intents.voice_states = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+bot.synced = False
 
 register_admin_commands(bot)
 register_events(bot)
-register_general_commands(bot)
 
-@bot.event
 @bot.event
 async def on_ready():
     if not bot.synced:
@@ -32,7 +29,7 @@ async def on_ready():
         bot.synced = True
     logger.info(f"Eingeloggt als {bot.user} (ID: {bot.user.id})")
 
-async def main():
+if __name__ == "__main__":
     if PRODUCTION:
         token = os.environ.get("DISCORD_TOKEN")
         if not token:
@@ -42,7 +39,4 @@ async def main():
             token = f.read().strip()
 
     logger.info("Starting bot...")
-    await bot.start(token)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    bot.run(token)

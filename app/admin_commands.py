@@ -71,16 +71,66 @@ def register_admin_commands(bot):
         delete(guild_id, category_name)
         await interaction.response.send_message(f"Tracking for category '{category_name}' has been removed and its voice channel deleted.")
 
-    @app_commands.command(name="set_required_role", description="Set the role required to create personal channels.")
-    @app_commands.describe(role="The required role users must have")
-    async def set_required_role(interaction: discord.Interaction, role: discord.Role):
-        guild_id = str(interaction.guild.id)
-        add(guild_id, "required_role_id", role.id)
+    @app_commands.command(
+        name="set_channel_name",
+        description="Setze den Standardnamen für neue Sprachkanäle in einer Kategorie."
+    )
+    @app_commands.describe(
+        category_name="Name einer getrackten Kategorie (erforderlich)",
+        channel_name="Neuer Standardname für Sprachkanäle in dieser Kategorie (erforderlich)"
+    )
+    @app_commands.autocomplete(category_name=tracked_category_autocomplete)
+    async def set_channel_name(
+            interaction: discord.Interaction,
+            category_name: str,
+            channel_name: str
+    ):
+        guild = interaction.guild
+        guild_id = str(guild.id)
+        config = get(guild_id)
 
-        await interaction.response.send_message(
-            f"Users must now have the **{role.name}** role to create their own channel.", ephemeral=True
-        )
+        if category_name not in config:
+            await interaction.response.send_message(
+                f"Die Kategorie '{category_name}' wird aktuell nicht getrackt.", ephemeral=True
+            )
+            return
+
+        if not channel_name or channel_name.strip() == "":
+            await interaction.response.send_message(
+                "Bitte gib einen gültigen Standardnamen für Sprachkanäle an.", ephemeral=True
+            )
+            return
+
+        config[category_name]["default_channel_name"] = channel_name
+        add(guild_id, category_name, config[category_name])
+
+        voice_channel_id = config[category_name].get("voice_channel_id")
+        if not voice_channel_id:
+            await interaction.response.send_message(
+                f"Für die Kategorie '{category_name}' ist kein Sprachkanal zum Erstellen gefunden.", ephemeral=True
+            )
+            return
+
+        channel = guild.get_channel(voice_channel_id)
+        if channel and isinstance(channel, discord.VoiceChannel):
+            try:
+                await channel.edit(name=channel_name)
+                await interaction.response.send_message(
+                    f"Der Standardname für neue Sprachkanäle in **{category_name}** ist jetzt: **{channel_name}**\n"
+                    f"Der Vorlagen-Sprachkanal wurde umbenannt.",
+                    ephemeral=True
+                )
+            except Exception as e:
+                await interaction.response.send_message(
+                    f"Fehler beim Umbenennen des Vorlagekanals: {e}",
+                    ephemeral=True
+                )
+        else:
+            await interaction.response.send_message(
+                f"Der Sprachkanal für die Kategorie '{category_name}' konnte nicht gefunden werden.",
+                ephemeral=True
+            )
 
     bot.tree.add_command(add_categorie)
     bot.tree.add_command(remove_categorie)
-    bot.tree.add_command(set_required_role)
+    bot.tree.add_command(set_channel_name)
