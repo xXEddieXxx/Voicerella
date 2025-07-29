@@ -7,7 +7,7 @@ from app.events import register_events
 from app.tasks import register_tasks
 from logger import logger
 
-PRODUCTION = False
+PRODUCTION = True
 
 intents = discord.Intents.default()
 intents.members = True
