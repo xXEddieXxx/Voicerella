@@ -1,6 +1,7 @@
 import discord
 from discord import ui, Interaction
 
+from app.voice_channel_modals import build_panel_embed
 from logger import logger
 
 
@@ -72,7 +73,7 @@ class ConfirmKickView(ui.View):
                 ephemeral=True
             )
             if self.panel.panel_message:
-                new_embed = self.panel.build_panel_embed(self.panel.owner, self.channel)
+                new_embed = build_panel_embed(self.panel.owner, self.channel)
                 await self.panel.panel_message.edit(embed=new_embed)
                 logger.debug(f"Panel-Embed nach Kick aktualisiert für Kanal '{self.channel.name}'")
         except Exception as e:

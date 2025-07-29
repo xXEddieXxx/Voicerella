@@ -6,7 +6,7 @@ from logger import logger
 from app.voice_channel_modals import (
     RenameChannelModal,
     SetUserLimitModal,
-    build_panel_embed,
+    build_panel_embed, SetStatusModal,
 )
 from app.voice_channel_views import (
     KickUserSelectView,
@@ -32,7 +32,7 @@ class VoiceChannelPanel(ui.View):
         logger.debug(f"Panel-Zugriff erlaubt für Besitzer {self.owner.display_name}")
         return True
 
-    @ui.button(label="Kanal umbenennen", style=ButtonStyle.primary, row=0)
+    @ui.button(label="🎤 Kanal umbenennen", style=ButtonStyle.secondary, row=0)
     async def rename(self, interaction: Interaction, button: ui.Button):
         logger.info(f"Rename-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
         try:
@@ -43,7 +43,7 @@ class VoiceChannelPanel(ui.View):
                 "❌ Fehler beim Öffnen des Umbenennen-Modals.", ephemeral=True
             )
 
-    @ui.button(label="Nutzerlimit setzen", style=ButtonStyle.secondary, row=0)
+    @ui.button(label="👥 Nutzerlimit festlegen", style=ButtonStyle.secondary, row=0)
     async def set_limit(self, interaction: Interaction, button: ui.Button):
         logger.info(f"Nutzerlimit-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
         try:
@@ -54,34 +54,7 @@ class VoiceChannelPanel(ui.View):
                 "❌ Fehler beim Öffnen des Nutzerlimit-Modals.", ephemeral=True
             )
 
-    @ui.button(label="Nutzer entfernen", style=ButtonStyle.danger, row=0)
-    async def kick_user(self, interaction: Interaction, button: ui.Button):
-        logger.info(f"Nutzer entfernen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
-        try:
-            kickable_members = [
-                m for m in self.channel.members if m != self.owner
-            ]
-            if not kickable_members:
-                logger.info(f"Keine weiteren Nutzer zum Entfernen in Kanal '{self.channel.name}'")
-                await interaction.response.send_message(
-                    "Kein weiterer Nutzer zum Entfernen gefunden.",
-                    ephemeral=True
-                )
-                return
-
-            await interaction.response.send_message(
-                "Wähle einen Nutzer zum Entfernen aus:",
-                ephemeral=True,
-                view=KickUserSelectView(self.channel, self.owner, self)
-            )
-        except Exception as e:
-            logger.error(f"Fehler beim Anzeigen der KickUserSelectView für Kanal '{self.channel.name}': {e}", exc_info=True)
-            await interaction.response.send_message(
-                "❌ Fehler beim Anzeigen der Nutzer-Auswahl.",
-                ephemeral=True
-            )
-
-    @ui.button(label="Besitz übertragen", style=ButtonStyle.success, row=0)
+    @ui.button(label="🔄 Besitz übertragen", style=ButtonStyle.secondary, row=0)
     async def transfer(self, interaction: Interaction, button: ui.Button):
         logger.info(f"Besitz übertragen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
         try:
@@ -108,7 +81,34 @@ class VoiceChannelPanel(ui.View):
                 ephemeral=True
             )
 
-    @ui.button(label="Kanal schließen", style=ButtonStyle.danger, row=0)
+    @ui.button(label="❌ Nutzer entfernen", style=ButtonStyle.secondary, row=0)
+    async def kick_user(self, interaction: Interaction, button: ui.Button):
+        logger.info(f"Nutzer entfernen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
+        try:
+            kickable_members = [
+                m for m in self.channel.members if m != self.owner
+            ]
+            if not kickable_members:
+                logger.info(f"Keine weiteren Nutzer zum Entfernen in Kanal '{self.channel.name}'")
+                await interaction.response.send_message(
+                    "Kein weiterer Nutzer zum Entfernen gefunden.",
+                    ephemeral=True
+                )
+                return
+
+            await interaction.response.send_message(
+                "Wähle einen Nutzer zum Entfernen aus:",
+                ephemeral=True,
+                view=KickUserSelectView(self.channel, self.owner, self)
+            )
+        except Exception as e:
+            logger.error(f"Fehler beim Anzeigen der KickUserSelectView für Kanal '{self.channel.name}': {e}", exc_info=True)
+            await interaction.response.send_message(
+                "❌ Fehler beim Anzeigen der Nutzer-Auswahl.",
+                ephemeral=True
+            )
+
+    @ui.button(label="🚫 Kanal schließen", style=ButtonStyle.secondary, row=0)
     async def close_channel(self, interaction: Interaction, button: ui.Button):
         logger.info(f"Kanal schließen-Button gedrückt von {interaction.user.display_name} für Kanal '{self.channel.name}'")
         try:

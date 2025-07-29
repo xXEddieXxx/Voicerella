@@ -21,8 +21,8 @@ def register_admin_commands(bot):
             if current.lower() in name.lower()
         ][:25]
 
-    @app_commands.command(name="add_categorie", description="Track an existing category and create a voice channel in it.")
-    @app_commands.describe(category_name="Name of an existing category to track")
+    @app_commands.command(name="add_categorie", description="Wähle eine Kategorie in der Nutzer ihre eigenen Channels erstellen dürfen")
+    @app_commands.describe(category_name="Name der Kategorie")
     @app_commands.autocomplete(category_name=all_category_autocomplete)
     async def add_categorie(interaction: discord.Interaction, category_name: str):
         guild = interaction.guild
@@ -30,24 +30,24 @@ def register_admin_commands(bot):
         category = discord.utils.get(guild.categories, name=category_name)
 
         if not category:
-            await interaction.response.send_message(f"Category '{category_name}' does not exist.", ephemeral=True)
+            await interaction.response.send_message(f"Kategorie '{category_name}' existiert nicht.", ephemeral=True)
             return
 
         existing = get(guild_id)
         if category_name in existing:
-            await interaction.response.send_message(f"Category '{category_name}' is already tracked.", ephemeral=True)
+            await interaction.response.send_message(f"Kategorie '{category_name}' wird bereits verwendet.", ephemeral=True)
             return
 
-        voice_channel = await guild.create_voice_channel(name="New Voice Channel", category=category)
+        voice_channel = await guild.create_voice_channel(name="➕ Kanal Erstellen", category=category)
         add(guild_id, category_name, {
             "category_id": category.id,
             "voice_channel_id": voice_channel.id
         })
 
-        await interaction.response.send_message(f"Voice channel created in category '{category_name}' and tracking saved.")
+        await interaction.response.send_message(f"Sprachaknal in ausgewählter Kategorie '{category_name}' erstellt.")
 
-    @app_commands.command(name="remove_categorie", description="Stop tracking a category and delete its voice channel.")
-    @app_commands.describe(category_name="Name of a tracked category to untrack")
+    @app_commands.command(name="remove_categorie", description="Entfernt eine Kategorie in der Nutzer ihre eigenen Channels erstellen")
+    @app_commands.describe(category_name="Name der Kategorie")
     @app_commands.autocomplete(category_name=tracked_category_autocomplete)
     async def remove_categorie(interaction: discord.Interaction, category_name: str):
         guild = interaction.guild
@@ -55,7 +55,7 @@ def register_admin_commands(bot):
         config = get(guild_id)
 
         if category_name not in config:
-            await interaction.response.send_message(f"Category '{category_name}' is not currently tracked.", ephemeral=True)
+            await interaction.response.send_message(f"Kategorie '{category_name}' wird nicht verwendet.", ephemeral=True)
             return
 
         voice_channel_id = config[category_name].get("voice_channel_id")
@@ -65,11 +65,11 @@ def register_admin_commands(bot):
                 try:
                     await channel.delete()
                 except discord.DiscordException as e:
-                    await interaction.response.send_message(f"Error deleting channel: {e}", ephemeral=True)
+                    await interaction.response.send_message(f"Fehler beim löschen des Sprachkanals: {e}", ephemeral=True)
                     return
 
         delete(guild_id, category_name)
-        await interaction.response.send_message(f"Tracking for category '{category_name}' has been removed and its voice channel deleted.")
+        await interaction.response.send_message(f"Kategorie '{category_name}' wurde entfernt und der Sprachkanal entfernt.")
 
     @app_commands.command(
         name="set_channel_name",

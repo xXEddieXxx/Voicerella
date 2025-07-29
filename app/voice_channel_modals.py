@@ -96,3 +96,32 @@ class SetUserLimitModal(ui.Modal, title="Nutzerlimit festlegen"):
                 "❌ Fehler beim Setzen des Nutzerlimits.",
                 ephemeral=True
             )
+
+class SetStatusModal(ui.Modal, title="Status festlegen"):
+    def __init__(self, channel: discord.VoiceChannel, panel_view: ui.View):
+        super().__init__()
+        self.channel = channel
+        self.panel_view = panel_view
+
+        self.status_input = ui.TextInput(
+            label="Neuer Status",
+            placeholder="Gib deinen gewünschten Status ein...",
+            required=True,
+            max_length=100
+        )
+        self.add_item(self.status_input)
+
+    async def on_submit(self, interaction: Interaction):
+        new_status = self.status_input.value.strip()
+        try:
+            await interaction.response.send_message(
+                f"✅ Kanalstatus aktualisiert auf: **{new_status}**",
+                ephemeral=True
+            )
+        except Exception as e:
+            import logging
+            logging.exception("Fehler beim Setzen des Status")
+            await interaction.response.send_message(
+                "❌ Fehler beim Aktualisieren des Status.",
+                ephemeral=True
+            )
